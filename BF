@@ -343,7 +343,7 @@ end)
 
 -----------::
 
-SetttingFarm:DropDown("Select Tool", ToolTipList, false, "Melee", function(toolSelection)
+SetttingFarm:DropDown("Select Tool", ToolTipList, false, "Sword", function(toolSelection)
 	Configs.SelectTool = toolSelection
 end)
 
@@ -762,7 +762,7 @@ local Connect; Connect = RunService.RenderStepped:Connect(function()
 					local goal = Part.CFrame
 					local distance = service.Distance( goal.Position, Character.HumanoidRootPart.Position )
 					local duration = distance/Configs.SpeedTween
-					
+
 					warn("found flower")
 					if distance <= 100 then
 						Character.PrimaryPart.CFrame = goal
@@ -784,7 +784,7 @@ local Connect; Connect = RunService.RenderStepped:Connect(function()
 		if Character and Configs.KillAura then
 
 			for index, valaue in next, Path.Enemies:GetChildren() do
-				if valaue:IsA("Model") and valaue:FindFirstChildOfClass("Humanoid") and valaue:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.KillAura and not workspace:FindFirstChild("FireFlowers"):FindFirstChild("DracoFireFlower", true) then
+				if valaue:IsA("Model") and valaue:FindFirstChildOfClass("Humanoid") and valaue:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.KillAura and not (workspace:FindFirstChild("FireFlowers") and workspace:FindFirstChild("FireFlowers"):FindFirstChild("DracoFireFlower", true)) then
 					repeat task.wait()
 						task.defer(function()
 							---: go to npc
@@ -805,31 +805,31 @@ local Connect; Connect = RunService.RenderStepped:Connect(function()
 							end
 
 							local SubData = {}
-							for i, v in next, Path.Enemies:GetChildren() do
-								local dis = service.Distance( v.HumanoidRootPart.Position, v.HumanoidRootPart.Position )
-								if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") and v:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.KillAura and v.Name == valaue.Name and valaue ~= v and dis <= 75 then
-									v.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame
+							--for i, v in next, Path.Enemies:GetChildren() do
+							--	local dis = service.Distance( v.HumanoidRootPart.Position, v.HumanoidRootPart.Position )
+							--	if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") and v:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.KillAura and v.Name == valaue.Name and valaue ~= v and dis <= 75 then
+							--		v.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame
 
-									local HumanoidTarget2 = valaue:FindFirstChildOfClass("Humanoid")
-									if HumanoidTarget2 and typeof(HumanoidTarget2) == "Instance" and HumanoidTarget2:IsA("Humanoid") then
-										HumanoidTarget2.WalkSpeed = 0
-										HumanoidTarget2.JumpPower = 0
-									end
+							--		local HumanoidTarget2 = valaue:FindFirstChildOfClass("Humanoid")
+							--		if HumanoidTarget2 and typeof(HumanoidTarget2) == "Instance" and HumanoidTarget2:IsA("Humanoid") then
+							--			HumanoidTarget2.WalkSpeed = 0
+							--			HumanoidTarget2.JumpPower = 0
+							--		end
 
-									for c,b in next, v:GetChildren() do
-										if b:IsA("BasePart") then
-											b.CanCollide = false
-										end
-									end
+							--		for c,b in next, v:GetChildren() do
+							--			if b:IsA("BasePart") then
+							--				b.CanCollide = false
+							--			end
+							--		end
 
-									if dis <= Configs.Distance * 2 then
-										table.insert( SubData, {
-											v,
-											v:FindFirstChild(hites[math.random(#hites)])
-										})
-									end
-								end
-							end
+							--		if dis <= Configs.Distance * 2 then
+							--			table.insert( SubData, {
+							--				v,
+							--				v:FindFirstChild(hites[math.random(#hites)])
+							--			})
+							--		end
+							--	end
+							--end
 
 							if distance <= Configs.Distance * 2 then
 								Character.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame + Vector3.new(0, Configs.Distance, 0)
@@ -841,7 +841,7 @@ local Connect; Connect = RunService.RenderStepped:Connect(function()
 								end
 							end
 						end)
-					until not Character  or not workspace:IsAncestorOf(Character) or not Configs.KillAura or not valaue:FindFirstChildOfClass("Humanoid") or valaue:FindFirstChildOfClass("Humanoid").Health <= 0 or valaue:FindFirstChildOfClass("Humanoid"):GetStatuses() == Enum.HumanoidStateType.Dead or workspace:FindFirstChild("FireFlowers"):FindFirstChild("DracoFireFlower", true)
+					until not Character  or not workspace:IsAncestorOf(Character) or not Configs.KillAura or not valaue:FindFirstChildOfClass("Humanoid") or valaue:FindFirstChildOfClass("Humanoid").Health <= 0 or valaue:FindFirstChildOfClass("Humanoid"):GetStatuses() == Enum.HumanoidStateType.Dead or (workspace:FindFirstChild("FireFlowers") and workspace:FindFirstChild("FireFlowers"):FindFirstChild("DracoFireFlower", true))
 				end
 			end
 		end
