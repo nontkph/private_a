@@ -1,0 +1,992 @@
+
+---: Service
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Replicatedstorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local HttpsService = game:GetService("HttpService")
+
+local User = Players.LocalPlayer
+local Camera = workspace:WaitForChild("Camera", math.huge)
+
+print("Rexel Hub : Loading. . .")
+repeat task.wait() until User and User:FindFirstChild("DataPreloaded") and User:FindFirstChild("DataLoaded")
+local CurrentKey = HttpsService:GenerateGUID(false)
+_G.Current = CurrentKey
+
+if not RunService:IsStudio() then
+	for i, v in next, game:GetService("CoreGui"):GetChildren() do
+		if v.Name == "Relex" then
+			v:Destroy()
+		end
+	end
+end
+
+task.wait()
+local hites = {
+	"LeftLowerArm";
+}
+print("Rexel Hub Loaded [✅] : key --> ", CurrentKey)
+
+local Library = if script:FindFirstChild("ModuleScript") then require(script.ModuleScript) else  loadstring(game:HttpGet("https://raw.githubusercontent.com/nontkph/Rexel-Hub/refs/heads/main/Libraries"))()
+local LibraryObject = Library.new( "Rexel Hub | Premium Script" )
+
+local VirtualUser =  game:GetService("VirtualUser")
+local Data = User:WaitForChild("Data", math.huge)
+local Level = Data:WaitForChild("Level", math.huge)
+
+print("Init Variable User!!!")
+---: Config
+local Configs = {
+	AutoMastery = true;
+	AutoRejoin = true;
+	AntiKick = true;
+	AutoLevel = false;
+
+	FastAttack = true;
+	KillAura = true;
+	SpeedTween = 400;
+	AutoFireFlower = true;
+	Size = 25;
+	Distance = 16;
+	FastAttaackDelay = 0.015;
+	DelayAttack = .25;
+	DumpDamage = 30;
+
+	---: auto raid
+	AutoRaid = false;
+	AutoMoveRaid = true;
+
+	AutoBuso = true;
+	AutoEmberTemplate = false;
+
+	MasteryTarget = "Combat";
+	EquipToolSelection = "Sword";
+};
+
+local Path = {
+	Enemies = workspace:WaitForChild("Enemies", math.huge);
+	NPCS = workspace:WaitForChild("NPCs", math.huge);
+	Remtoe = Replicatedstorage:WaitForChild("Remotes");
+	Quests = Replicatedstorage:WaitForChild("Quests", math.huge);
+	Respawn = workspace:WaitForChild("_WorldOrigin", math.huge):WaitForChild("EnemySpawns", math.huge);
+	NpcsReplicated = Replicatedstorage:WaitForChild("NPCs", math.huge);
+	Locations = workspace:WaitForChild("_WorldOrigin", math.huge):WaitForChild("Locations", math.huge);
+};
+print("Init Variable Folder Path")
+---: Bypass Anti Cheat
+
+local WorldLevel = {
+	[2753915549] = 650;
+	[4442272183] = 1500;
+	[7449423635] = math.huge;
+};
+
+require(Replicatedstorage:WaitForChild('Util', math.huge).CameraShaker):Stop()
+
+local QuestsSort = {}
+local WorldCapQuest = WorldLevel[game.PlaceId]
+local CapLevel;
+
+if WorldCapQuest then
+	CapLevel = WorldCapQuest
+	warn("Detect World Limit Level Farm : ", CapLevel)
+end
+
+for NpcString: string, value: {} in next, require(Path.Quests) do
+	if type(value) == "table" then
+		for numberQuest, QuestInfo in next, value do
+			QuestsSort[ QuestInfo.LevelReq ] = { num = numberQuest, npc = NpcString, target = QuestInfo.Name }
+		end
+	end
+end
+
+local env = getfenv(1)
+local Method = setmetatable({},{
+	__index = function(t,k)
+		if k == "size" or k == "vector" then
+			return Vector3.new(1,1,1) * Configs.Size
+		end
+		return env[k]
+	end,
+	__newindex = function(t,k,v)
+		return rawset(env,k,v)   
+	end,
+})
+
+setfenv(1,Method)
+for _,k in next, Path.Enemies:children() do
+	if k.className:lower() == "model" then
+		k.HumanoidRootPart.CanCollide = false
+		--k.HumanoidRootPart.Size = Method.size or Method.vector    
+	end
+end
+
+Path.Enemies.ChildAdded:Connect(function(v)
+	for _,k in next, Path.Enemies:children() do
+		if k.className:lower() == "model" then
+			k.HumanoidRootPart.CanCollide = false
+			--k.HumanoidRootPart.Size = Method.size or Method.vector
+		end
+	end
+end)
+
+---: Service
+local service = {}
+local LogTween = {}
+function service.Tween( instance, tweenInfo, properties, autoPlay )
+	local Tween = TweenService:Create( instance, tweenInfo, properties )
+	if autoPlay then
+		Tween:Play()
+	end
+
+	Tween.Completed:Once(function()
+		local index = table.find( LogTween, Tween )
+		if index then
+			table.remove(LogTween, index)
+		end
+		Tween:Destroy()
+	end)
+
+	table.insert(LogTween, Tween)
+	return Tween
+end
+
+function service.Click()
+	pcall(function()
+		VirtualUser:CaptureController()
+		VirtualUser:Button1Down(Vector2.new(0,1,0,1))
+	end)
+end
+
+function service.GetQuestLevel(  )
+	local CurrentLevel = Level.Value or 0
+	local QuestLevel, QuestInfo = 0, {}
+
+	for lv, info in next, QuestsSort do
+		if QuestLevel <= lv and lv <= CurrentLevel and ( (not CapLevel) or (CapLevel and (lv < CapLevel)) ) then
+			QuestLevel = lv
+			QuestInfo = info
+		end
+	end	
+
+	return QuestInfo, QuestLevel
+end
+
+function service.GetQuest(npc: string, numberQuest: number)
+	local args = {
+		[1] = "StartQuest",
+		[2] = npc or "TikiQuest3",
+		[3] = numberQuest or 1
+	}
+
+	Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+end
+
+local ToolTipList = {
+	"Sword";
+	"Melee";
+	"Blox Fruit";
+	"Gun";
+};
+
+function service.ScanTools(tooltip)
+	local tools = {}
+
+	return tools
+end
+
+function service.CancleQuest()
+	local args = {
+		[1] = "AbandonQuest"
+	}
+	Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+end
+
+local Current = nil
+function service.Character()
+	local model = Current or User.Character
+	if Current ~= model then
+		Current = model
+		local mt = getrawmetatable(Current.HumanoidRootPart.Position)
+		local old
+		old = hookfunc(mt.__index,function(t,k)
+			local s = getcallingscript()
+			if s.name == "Net" and k:lower() == "magnitude" then
+				return math.random(10/2)
+			end
+			return old(t,k)
+		end)
+	end
+	repeat task.wait()
+		model = User.Character
+	until workspace:IsAncestorOf(model) and model == User.Character
+	return model
+end
+
+function service.Distance(position1: Vector3, Position2: Vector3)
+	return ( ( if typeof(position1) == "Vector3" then position1 else Vector3.new(0, 0, 0) ) - ( if typeof(Position2) == "Vector3" then Position2 else Vector3.new(0, 0, 0) ) ).Magnitude or 1000000000
+end
+
+local LastFast = tick()
+function service.FastAttack(target: Model, subdata :{})
+	local character = service.Character()
+	if not character or not character:FindFirstChildOfClass("Tool") or tick() < LastFast then return end
+
+	LastFast = tick() + Configs.DelayAttack
+	for i = 1, 100 do
+		task.defer(function()
+			local args = {[1] = 0.001}
+			Replicatedstorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterAttack"):FireServer(unpack(args))
+			local args2 = {[1] = target:FindFirstChild( hites[math.random(#hites)] ), [2] = (subdata or {})}
+			Replicatedstorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterHit"):FireServer(unpack(args2))
+		end)
+	end
+
+end
+
+---: create ui
+
+local MainPage = LibraryObject:AddPage("Main")
+local AutoFarmGroup = MainPage:Group("Auto Farm :: ", "Left")
+local SetttingFarm = MainPage:Group("Auto Farm Setting :: ", "Right")
+
+
+local Mice = LibraryObject:AddPage("Mice :: ", "Right")
+local Remote = Mice:Group("Remote :")
+local RaidGroup = Mice:Group("Raid :")
+local Teleport = Mice:Group("Teleport :", "Right")
+local Premium = Mice:Group("Premium Fruit :", "Right")
+local Other = Mice:Group("Other :", "Right")
+
+Other:Button("Beast Hunter Boat | $5,000", function()
+	local args = {
+		[1] = "BuyBoat",
+		[2] = "Beast Hunter"
+	}
+	Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+RaidGroup:Toggle("Auto Raid", Configs.AutoRaid, function(bool)
+	Configs.AutoRaid = bool
+
+	if not bool or bool == false then
+		for i, v in next, LogTween do
+			v:Cancel()
+			v:Destroy()
+			v = nil
+			LogTween[i] = nil
+		end
+	end
+end)
+
+Premium:Button("[🕳️] Portal :", function()
+	local args = {
+		[1] = "SwitchFruit",
+		[2] = "Portal-Portal",
+	}
+	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+Premium:Button("[🔥] Magma :", function()
+	local args = {
+		[1] = "SwitchFruit",
+		[2] = "Magma-Magma",
+	}
+	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+Premium:Button("[🕳🦊] Kitsune :", function()
+	local args = {
+		[1] = "SwitchFruit",
+		[2] = "Kitsune-Kitsune",
+	}
+	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+Premium:Button("[🕳🐲] Dragon W :", function()
+	local args = {
+		[1] = "SwitchFruit",
+		[2] = "Dragon-Dragon",
+		[3] = "West"
+	}
+	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+
+Premium:Button("[🕳🐲] Dragon E :", function()
+	local args = {
+		[1] = "SwitchFruit",
+		[2] = "Dragon-Dragon",
+		[3] = "East"
+	}
+	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+
+-----:
+
+Teleport:Button("First Sea", function()
+	Path.Remtoe.CommF_:InvokeServer("TravelMain")
+end)
+
+Teleport:Button("Second Sea", function()
+	Path.Remtoe.CommF_:InvokeServer("TravelDressrosa")
+end)
+Teleport:Button("Third Sea", function()
+	Path.Remtoe.CommF_:InvokeServer("TravelZou")
+end)
+
+RaidGroup:Toggle("Auto Next Island", Configs.AutoMoveRaid, function(bool)
+	Configs.AutoMoveRaid = bool
+end)
+
+-----------::
+
+SetttingFarm:DropDown("Select Tool", ToolTipList, false, "Melee", function(toolSelection)
+	Configs.SelectTool = toolSelection
+end)
+
+AutoFarmGroup:Toggle("Auto Level", Configs.AutoLevel, function(bool)
+	Configs.AutoLevel = bool
+
+	if not bool or bool == false then
+		for i, v in next, LogTween do
+			v:Cancel()
+			v:Destroy()
+			v = nil
+			LogTween[i] = nil
+		end
+	end
+end)
+
+AutoFarmGroup:Toggle("Auto EmberTemplate", Configs.AutoEmberTemplate, function(bool)
+	Configs.AutoEmberTemplate = bool
+
+	if not bool or bool == false then
+		for i, v in next, LogTween do
+			v:Cancel()
+			v:Destroy()
+			v = nil
+			LogTween[i] = nil
+		end
+	end
+end)
+
+AutoFarmGroup:Toggle("Kill Aura", Configs.KillAura, function(bool)
+	Configs.KillAura = bool
+
+	if not bool or bool == false then
+		for i, v in next, LogTween do
+			v:Cancel()
+			v:Destroy()
+			v = nil
+			LogTween[i] = nil
+		end
+	end
+end)
+
+
+AutoFarmGroup:Toggle("Fire Flower", Configs.AutoFireFlower, function(bool)
+	Configs.AutoFireFlower = bool
+end)
+
+Remote:Button("Bone  Random", function()
+	local args = {
+		[1] = "Bones",
+		[2] = "Buy",
+		[3] = 1,
+		[4] = 1
+	}
+
+	Replicatedstorage:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+Remote:Button("Random Fruit", function()
+	local args = {
+		[1] = "Cousin",
+		[2] = "Buy"
+	}
+	Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+Remote:Button("Refund [ƒ2,500]", function()
+	local args = {
+		[1] = "BlackbeardReward",
+		[2] = "Refund",
+		[3] = "2"
+	}
+	Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+Remote:Button("Reroll Race [ƒ3,000]", function()
+	local args = {
+		[1] = "BlackbeardReward",
+		[2] = "Reroll",
+		[3] = "2"
+	}
+	Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+end)
+
+SetttingFarm:Slide("Tween Speed", 0, 500, Configs.SpeedTween, true, function(num)
+	Configs.SpeedTween = num
+end)
+
+SetttingFarm:Slide("Distance", -50, 50, Configs.Distance, true, function(num)
+	Configs.Distance = num
+end)
+
+SetttingFarm:Slide("Delay Attack", 0.1, 5, Configs.DelayAttack, true, function(num)
+	Configs.DelayAttack = num
+end)
+
+
+function service.FindQuest(QuestName: string, findname: boolean)
+
+	if findname then
+		local result = Path.NPCS:FindFirstChild(QuestName) or Path.NpcsReplicated:FindFirstChild(QuestName)
+		return result
+	end
+
+	for i, v in next, Path.NPCS:GetChildren() do
+		if ((v.Name):gsub("Giver","")):gsub(" ", ""):match(QuestName) then
+			return v
+		end
+	end
+	for i, v in next, Path.NpcsReplicated:GetChildren() do
+		if ((v.Name):gsub("Giver","")):gsub(" ", ""):match(QuestName) then
+			return v
+		end
+	end
+	return false
+end
+
+function service.Equip( toolTip )
+	local Character = service.Character()
+	if not Character then return end
+	local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+
+	if typeof( toolTip ) == "Instance" and toolTip:IsA("Tool") then
+		Humanoid:EquipTool( toolTip )
+	elseif typeof(toolTip) == "string" then
+		for index, value in next, User.Backpack:GetChildren() do
+			if value:IsA("Tool") and value.ToolTip == toolTip then
+				Humanoid:EquipTool( value )
+				break
+			end
+		end
+	end
+end
+
+function service.GetLocation(Finder: string)
+	local resule = nil
+	for i, v in next, Path.Respawn:GetChildren() do
+		if (v.Name):match(Finder) then
+			resule = v
+			break
+		end
+	end
+	return resule
+end
+
+task.defer(function()
+	local Connect; Connect = RunService.RenderStepped:Connect(function()
+
+		if _G.Current ~= CurrentKey then
+			Connect:Disconnect()
+			warn("Break Old Version Loop [ loop 1 ]", CurrentKey)
+		end
+
+		local Character = service.Character()
+		if not Character then return end
+
+		if Configs.AutoLevel or Configs.KillAura or Configs.AutoRaid or Configs.AutoEmberTemplate or Configs.AutoFireFlower then
+			pcall(function()
+				sethiddenproperty(User,"SimulationRadius",math.huge)
+
+				---: noclip
+				if not Character.HumanoidRootPart:FindFirstChild("BodyClip") then
+					local Noclip = Instance.new("BodyVelocity")
+					Noclip.Name = "BodyClip"
+					Noclip.Parent = Character.HumanoidRootPart
+					Noclip.MaxForce = Vector3.new(100000,100000,100000)
+					Noclip.Velocity = Vector3.new(0,0,0)
+				end
+
+				for _, v in pairs(Character:GetDescendants()) do
+					if v:IsA("BasePart") then
+						v.CanCollide = false    
+					end
+				end
+
+			end)
+		else
+			pcall(function()
+				if Character:FindFirstChild("BodyClip", true) then
+					Character:FindFirstChild("BodyClip", true):Destroy()
+				end
+			end)
+		end
+	end)
+end)
+
+function CheckIsTargetQuest(target: string)
+	return (User.PlayerGui:WaitForChild("Main", math.huge):WaitForChild("Quest", math.huge):WaitForChild("Container", math.huge):WaitForChild("QuestTitle", math.huge):WaitForChild("Title", math.huge).Text):match(target or "Fucking shit target")
+end
+
+function CheckQuestEmberTemplateQuest(Tabl: {})
+	for index, value in next, if typeof(Tabl) == "table" then Tabl else {} do
+		if index == "Text" then
+			return true
+		end
+	end
+	return false
+end
+
+local OldQuest = nil
+local NextCheck = tick() + 3
+local Connect; Connect = RunService.RenderStepped:Connect(function()
+
+	if _G.Current ~= CurrentKey then
+		Connect:Disconnect()
+		warn("Break Old Version Loop [ loop 2 ]", CurrentKey)
+	end
+
+	task.defer(function()
+		--pcall(function()
+		if Configs.AutoEmberTemplate then
+
+			local Character = service.Character()
+			local EmberTemplate : Model = workspace:FindFirstChild("EmberTemplate")
+
+			if EmberTemplate and Character then
+				local Goal =  EmberTemplate:GetPivot() or EmberTemplate:FindFirstChildOfClass("BasePart").CFrame
+				local Distance = service.Distance( Character.HumanoidRootPart.Position, Goal.Position )
+
+				if Distance <= 500 then
+					if Configs.AutoEmberTemplate then
+						service.Tween( Character.HumanoidRootPart, TweenInfo.new(Distance/Configs.SpeedTween, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = Goal}, true )
+					end
+				end
+
+			end 
+
+			---: Auto Quest
+			if not EmberTemplate and not workspace:FindFirstChild("EmberTemplate") then
+
+				local data = {[1] = {["Context"] = "Check"}}
+				local EmberTemplateQuest = OldQuest or Replicatedstorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/DragonHunter"):InvokeServer(unpack(data))
+
+				if tick() >= NextCheck then
+					NextCheck = tick() + 3
+					OldQuest = EmberTemplateQuest
+					task.delay(3, function()
+						OldQuest = nil
+					end)
+				end
+
+				if EmberTemplateQuest and typeof(EmberTemplateQuest) == "table" and CheckQuestEmberTemplateQuest(EmberTemplateQuest) then
+					---: Doing Quest
+
+					local TypeQuest : string = (EmberTemplateQuest.Text)
+					if (TypeQuest):match( "Defeat" ) then
+						local Split = string.split( TypeQuest, " " )
+						local EnemySelection = `{Split[3]} {Split[4]}`
+
+						for i, v in next, Path.Enemies:GetChildren() do
+							if string.match(v.Name, EnemySelection) or string.match(EnemySelection, v.Name) then
+								EnemySelection = v.Name
+								task.delay(3, function()
+									OldQuest = nil
+								end)
+							end
+						end
+
+						if Path.Enemies:FindFirstChild( EnemySelection ) then
+							for index, valaue in next, Path.Enemies:GetChildren() do
+								if valaue:IsA("Model") and valaue:FindFirstChildOfClass("Humanoid") and valaue:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.AutoEmberTemplate and string.match( valaue.Name, EnemySelection ) or string.match(EnemySelection, valaue.Name) and not workspace:FindFirstChild("EmberTemplate") then
+									repeat task.wait()
+										task.defer(function()
+											---: go to npc
+											local goal = (valaue.HumanoidRootPart or valaue:FindFirstChildOfClass("BasePart")).CFrame
+											local distance = service.Distance( Character.HumanoidRootPart.Position, goal.Position )
+											local duration = distance/Configs.SpeedTween
+
+											if distance <= Configs.Distance * 2 then
+												Character.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame + Vector3.new(0, Configs.Distance, 0)
+												service.Equip( Configs.SelectTool )
+												service.FastAttack(valaue)
+											else
+												if Configs.AutoEmberTemplate then
+													service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = (valaue.HumanoidRootPart.CFrame + Vector3.new(0, Configs.Distance, 0))}, true )
+												end
+											end
+										end)
+									until not Character  or not workspace:IsAncestorOf(Character) or not Configs.AutoEmberTemplate or not valaue:FindFirstChildOfClass("Humanoid") or valaue:FindFirstChildOfClass("Humanoid").Health <= 0 or valaue:FindFirstChildOfClass("Humanoid"):GetStatuses() == Enum.HumanoidStateType.Dead or workspace:FindFirstChild("EmberTemplate")
+								end
+							end
+						else
+							local EnemyT = CFrame.new(4897.04785, 1056.72498, 739.860962, -0.315689981, -2.05672972e-08, 0.948862374, -1.62816125e-08, 1, 1.62587916e-08, -0.948862374, -1.03162723e-08, -0.315689981)
+							local Des = service.Distance( EnemyT.Position, Character.HumanoidRootPart.Position )
+							service.Tween( Character.HumanoidRootPart, TweenInfo.new(Des/Configs.SpeedTween, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = EnemyT }, true ).Completed:Wait()
+						end
+
+					else
+						Character.HumanoidRootPart.CFrame = CFrame.new(5331.61475, 1005.34668, 372.454803, -0.482325047, -5.79514614e-09, -0.875992298, -1.96892308e-10, 1, -6.50711218e-09, 0.875992298, -2.96606695e-09, -0.482325047)
+					end
+				else
+					---: Get Quest
+					local npcLocation : Model = service.FindQuest("Dragon Hunter", true)
+					if npcLocation then
+						local goal = npcLocation:WaitForChild("HumanoidRootPart", math.huge).CFrame
+						local distance = service.Distance( goal.Position, Character.HumanoidRootPart.Position )
+						local duration = distance/Configs.SpeedTween
+
+						if distance <= 100 then
+							Character.PrimaryPart.CFrame = goal
+							local args = {[1] = {["Context"] = "RequestQuest"}}
+							Replicatedstorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/DragonHunter"):InvokeServer(unpack(args))
+						else
+							if Configs.AutoEmberTemplate and not workspace:FindFirstChild("EmberTemplate") and not EmberTemplateQuest then
+								service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = goal}, true )
+							end
+						end
+					else
+						print("not found npc")
+					end
+				end
+
+				--:
+			else
+				print("wait for quest complete.")
+			end
+
+		end
+		--end)
+	end)
+
+	---: Auto Buso
+	task.defer(function()
+		pcall(function()
+			local Character = service.Character()
+			if Character and Configs.AutoBuso then
+				if not Character:FindFirstChild("HasBuso") then
+					local args = {
+						[1] = "Buso"
+					}
+					Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+				end
+			end
+		end)
+	end)
+
+	---: Auto Raid
+	task.defer(function()
+		if Configs.AutoRaid then
+			local Character = service.Character()
+			local RaidModel = workspace:FindFirstChild("Map"):WaitForChild("RaidMap");
+			if RaidModel and Character then
+				--\\ [ tool : Special Microchip ]
+				local TimerFrame: TextLabel = User.PlayerGui:WaitForChild("Main", math.huge):WaitForChild("TopHUDList", math.huge):FindFirstChild("RaidTimer")
+				if TimerFrame then
+
+					if TimerFrame.Visible then
+						---: in raid
+						if Configs.AutoMoveRaid then
+							local number, model = -1, nil
+							for index, value in next, Path.Locations:GetChildren() do
+								if (value.Name):match("Island") then
+									local modelRaidNumber = tonumber((value.Name):gsub("%D", "")) or 0
+									if modelRaidNumber then
+										if tonumber(modelRaidNumber) >= number then
+											number = tonumber(modelRaidNumber)
+											model = value
+										end
+									end
+								end
+							end
+
+							---: Check to tween
+							if model and typeof(model) == "Instance" and model:IsA("BasePart") then
+								local goal = model.CFrame + Vector3.new(0, 50, 0)
+								if goal then
+
+									local distance = service.Distance( goal.Position, Character.HumanoidRootPart.Position )
+									local duration = distance/Configs.SpeedTween
+
+									if distance <= 100 then
+										Character.PrimaryPart.CFrame = goal
+									else
+										if Configs.AutoRaid and Configs.AutoMoveRaid then
+											service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = goal}, true )
+										end
+									end
+								end
+							end
+
+						end
+
+						---: Kill Aura
+						for index, Value in next, Path.Enemies:GetChildren() do
+							if Value:IsA("Model") and Value:FindFirstChildOfClass("Humanoid") and Value:FindFirstChildOfClass("Humanoid").Health > 0 and service.Distance(Value.HumanoidRootPart.Position, Character.HumanoidRootPart.Position) <= 1000 then
+								pcall(function()
+									Value:FindFirstChildOfClass("Humanoid").Health = 0
+									Value.HumanoidRootPart.CanCollide = false
+									sethiddenproperty(User, "SimulationRadius", math.huge)
+								end)
+							end
+						end
+
+					end
+				end
+				--// {raid end method range}
+			end
+		end
+	end)
+
+	---: Fire Flower
+	task.defer(function()
+		--pcall(function()
+		if Configs.AutoFireFlower then
+			local Character = service.Character()
+			local Folder = workspace:FindFirstChild("FireFlowers")
+			if Folder and Character then
+				local Proximity = Folder:FindFirstChild("ProximityPrompt", true)
+
+				local Model = Folder:FindFirstChildOfClass("Model")
+				if not Model then return end
+				print("found Flower Spawned !!")
+				local Part = Model:FindFirstChildOfClass("BasePart") or Model:FindFirstChild("DracoFireFlower")
+				print("found Basepart to tween", Part)
+				if Part then
+					local goal = Part.CFrame
+					local distance = service.Distance( goal.Position, Character.HumanoidRootPart.Position )
+					local duration = distance/Configs.SpeedTween
+					
+					warn("found flower")
+					if distance <= 100 then
+						Character.PrimaryPart.CFrame = goal
+						fireproximityprompt(Proximity, math.random(10))
+					else
+						if Configs.AutoFireFlower then
+							service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = goal}, true )
+						end
+					end
+				end
+			end
+		end
+		--end)
+	end)
+
+	---: Kill Aura
+	task.defer(function()
+		local Character = service.Character()
+		if Character and Configs.KillAura then
+
+			for index, valaue in next, Path.Enemies:GetChildren() do
+				if valaue:IsA("Model") and valaue:FindFirstChildOfClass("Humanoid") and valaue:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.KillAura and not workspace:FindFirstChild("FireFlowers"):FindFirstChild("DracoFireFlower", true) then
+					repeat task.wait()
+						task.defer(function()
+							---: go to npc
+							local goal = (valaue.HumanoidRootPart or valaue:FindFirstChildOfClass("BasePart")).CFrame
+							local distance = service.Distance( Character.HumanoidRootPart.Position, goal.Position )
+							local duration = distance/Configs.SpeedTween
+
+							local HumanoidTarget = valaue:FindFirstChildOfClass("Humanoid")
+							if HumanoidTarget and typeof(HumanoidTarget) == "Instance" and HumanoidTarget:IsA("Humanoid") then
+								HumanoidTarget.WalkSpeed = 0
+								HumanoidTarget.JumpPower = 0
+							end
+
+							for z,x in next, valaue:GetChildren() do
+								if x:IsA("BasePart") then
+									x.CanCollide = false
+								end
+							end
+
+							local SubData = {}
+							for i, v in next, Path.Enemies:GetChildren() do
+								local dis = service.Distance( v.HumanoidRootPart.Position, v.HumanoidRootPart.Position )
+								if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") and v:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.KillAura and v.Name == valaue.Name and valaue ~= v and dis <= 75 then
+									v.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame
+
+									local HumanoidTarget2 = valaue:FindFirstChildOfClass("Humanoid")
+									if HumanoidTarget2 and typeof(HumanoidTarget2) == "Instance" and HumanoidTarget2:IsA("Humanoid") then
+										HumanoidTarget2.WalkSpeed = 0
+										HumanoidTarget2.JumpPower = 0
+									end
+
+									for c,b in next, v:GetChildren() do
+										if b:IsA("BasePart") then
+											b.CanCollide = false
+										end
+									end
+
+									if dis <= Configs.Distance * 2 then
+										table.insert( SubData, {
+											v,
+											v:FindFirstChild(hites[math.random(#hites)])
+										})
+									end
+								end
+							end
+
+							if distance <= Configs.Distance * 2 then
+								Character.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame + Vector3.new(0, Configs.Distance, 0)
+								service.Equip( Configs.SelectTool )
+								service.FastAttack(valaue, SubData)
+							else
+								if Configs.KillAura then
+									service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = (valaue.HumanoidRootPart.CFrame + Vector3.new(0, Configs.Distance, 0))}, true )
+								end
+							end
+						end)
+					until not Character  or not workspace:IsAncestorOf(Character) or not Configs.KillAura or not valaue:FindFirstChildOfClass("Humanoid") or valaue:FindFirstChildOfClass("Humanoid").Health <= 0 or valaue:FindFirstChildOfClass("Humanoid"):GetStatuses() == Enum.HumanoidStateType.Dead or workspace:FindFirstChild("FireFlowers"):FindFirstChild("DracoFireFlower", true)
+				end
+			end
+		end
+	end)
+
+	---: Auto Fael Level
+	task.defer(function()
+		if Configs.AutoLevel then
+			--pcall(function()
+			local QuestFrame : Frame = User.PlayerGui.Main:WaitForChild("Quest", math.huge)
+			local CurrentQuest, levelquest = service.GetQuestLevel()
+
+			if not QuestFrame.Visible then
+				if CurrentQuest then
+
+					local Npc : Model = service.FindQuest( CurrentQuest.npc )
+
+					if CurrentQuest.npc == "FountainQuest" then
+						Npc = service.FindQuest("Freezeburg Quest Giver", true)
+					end
+
+					if not Npc then
+						Npc = service.FindQuest( CurrentQuest.npc, true )
+					end
+
+					if Npc then
+						local Character: Model = service.Character()
+						if Character then
+							local goal = (Npc.HumanoidRootPart or Npc:FindFirstChildOfClass("BasePart")).CFrame
+							local distance = service.Distance( Character.HumanoidRootPart.Position, goal.Position )
+							local duration = distance/Configs.SpeedTween
+
+							if Configs.AutoLevel then
+								service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = goal}, true ).Completed:Once(function()
+									if service.Distance( Character.HumanoidRootPart.Position, goal.Position ) <= 10 then
+										service.GetQuest( CurrentQuest.npc, CurrentQuest.num )
+									end
+								end)
+							end
+						end
+					else
+						print("not found npc/ ", CurrentQuest.npc, levelquest,  CapLevel)
+					end
+				end
+			else
+				---: Teleport To Farm
+				if CurrentQuest then
+
+					if not CheckIsTargetQuest(CurrentQuest.target) then
+						local args = {
+							[1] = "AbandonQuest"
+						}
+						Path.Remtoe:WaitForChild("CommF_"):InvokeServer(unpack(args))
+					end
+
+					local Character = service.Character()
+					if Path.Enemies:FindFirstChild(CurrentQuest.target) and Character then
+
+						for index, valaue in next, Path.Enemies:GetChildren() do
+							if valaue:IsA("Model") and valaue:FindFirstChildOfClass("Humanoid") and valaue:FindFirstChildOfClass("Humanoid").Health > 0  and valaue.Name == CurrentQuest.target and Configs.AutoLevel and QuestFrame.Visible then
+								repeat task.wait()
+									task.defer(function()
+										---: go to npc
+										local goal = (valaue.HumanoidRootPart or valaue:FindFirstChildOfClass("BasePart")).CFrame
+										local distance = service.Distance( Character.HumanoidRootPart.Position, goal.Position )
+										local duration = distance/Configs.SpeedTween
+
+										local HumanoidTarget = valaue:FindFirstChildOfClass("Humanoid")
+										if HumanoidTarget and typeof(HumanoidTarget) == "Instance" and HumanoidTarget:IsA("Humanoid") then
+											HumanoidTarget.WalkSpeed = 0
+											HumanoidTarget.JumpPower = 0
+										end
+
+										for z,x in next, valaue:GetChildren() do
+											if x:IsA("BasePart") then
+												x.CanCollide = false
+											end
+										end
+
+										local SubData = {}
+										for i, v in next, Path.Enemies:GetChildren() do
+											local dis = service.Distance( v.HumanoidRootPart.Position, v.HumanoidRootPart.Position )
+											if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") and v:FindFirstChildOfClass("Humanoid").Health > 0 and Configs.KillAura and v.Name == valaue.Name and valaue ~= v and dis <= 75 then
+												v.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame
+
+												local HumanoidTarget2 = v:FindFirstChildOfClass("Humanoid")
+												if HumanoidTarget2 and typeof(HumanoidTarget2) == "Instance" and HumanoidTarget2:IsA("Humanoid") then
+													HumanoidTarget2.WalkSpeed = 0
+													HumanoidTarget2.JumpPower = 0
+												end
+
+
+												for c,b in next, v:GetChildren() do
+													if b:IsA("BasePart") then
+														b.CanCollide = false
+													end
+												end
+
+												if dis <= Configs.Distance * 2 then
+													table.insert( SubData, {
+														v,
+														v:FindFirstChild(hites[math.random(#hites)])
+													})
+												end
+											end
+										end
+
+										if distance <= Configs.Distance * 2 then
+											Character.HumanoidRootPart.CFrame = valaue.HumanoidRootPart.CFrame + Vector3.new(0, Configs.Distance, 0)
+											service.Equip( Configs.SelectTool )
+											service.FastAttack(valaue, SubData)
+										else
+											if Configs.AutoLevel then
+												service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = (valaue.HumanoidRootPart.CFrame + Vector3.new(0, Configs.Distance, 0))}, true )
+											end	
+										end
+									end)
+								until not Character or (not CheckIsTargetQuest(CurrentQuest.target)) or not QuestFrame.Visible or not workspace:IsAncestorOf(Character) or not Configs.AutoLevel or not valaue:FindFirstChildOfClass("Humanoid") or valaue:FindFirstChildOfClass("Humanoid").Health <= 0 or valaue:FindFirstChildOfClass("Humanoid"):GetStatuses() == Enum.HumanoidStateType.Dead
+							end
+						end
+
+					else
+						local Location = service.GetLocation(CurrentQuest.target) 
+						local Character = service.Character()
+
+						if Location and Character then
+							local goal = (Location).CFrame
+							local distance = service.Distance( Character.HumanoidRootPart.Position, goal.Position )
+							local duration = distance/Configs.SpeedTween
+
+							if distance <= 350 then
+								Character.PrimaryPart.CFrame = goal
+							else
+								if Configs.AutoLevel then
+									service.Tween( Character.HumanoidRootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = goal}, true )
+								end
+							end
+
+						end
+
+					end
+				end
+			end
+
+			--end)
+		end
+	end)
+end)
